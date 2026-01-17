@@ -1,0 +1,37 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test files
+*_test.go
+testdata/
+
+# Build artifacts
+bin/
+*.exe
+bootstrap
+
+# CI/CD
+.github/
+
+# Terraform
+terraform/
+
+# Local environment
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db

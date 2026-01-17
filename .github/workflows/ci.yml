@@ -41,7 +41,24 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Run tests with race detector
-        run: make test-race
+        run: go test -race -v ./...
+
+      - name: Run concurrency tests
+        run: go test -race -v -run "Concurrent" ./...
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
 
   build:
     name: Build
@@ -56,8 +73,42 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Build
-        run: make build
+      - name: Build binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bootstrap ./cmd/server
 
-      - name: Verify binary exists
-        run: test -f bin/server
+      - name: Build Docker image
+        run: docker build -t url-shortener:${{ github.sha }} .
+
+      - name: Verify non-root user in container
+        run: |
+          docker run --rm --entrypoint="" url-shortener:${{ github.sha }} cat /etc/passwd | grep -q nonroot
+
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    if: hashFiles('terraform/**/*.tf') != ''
+    strategy:
+      matrix:
+        provider: [aws, gcp]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: terraform/${{ matrix.provider }}
+        run: terraform init -backend=false
+        continue-on-error: true
+
+      - name: Terraform Validate
+        working-directory: terraform/${{ matrix.provider }}
+        run: terraform validate
+        continue-on-error: true
+
+      - name: Terraform Format Check
+        working-directory: terraform/${{ matrix.provider }}
+        run: terraform fmt -check -recursive
+        continue-on-error: true
