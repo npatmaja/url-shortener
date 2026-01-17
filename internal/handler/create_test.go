@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"url-shortener/internal/domain"
 	"url-shortener/internal/handler"
 
 	"github.com/stretchr/testify/assert"
@@ -21,12 +22,12 @@ type MockURLService struct {
 	mock.Mock
 }
 
-func (m *MockURLService) Create(ctx context.Context, longURL string, ttl time.Duration) (*handler.URLRecord, error) {
+func (m *MockURLService) Create(ctx context.Context, longURL string, ttl time.Duration) (*domain.URLRecord, error) {
 	args := m.Called(ctx, longURL, ttl)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*handler.URLRecord), args.Error(1)
+	return args.Get(0).(*domain.URLRecord), args.Error(1)
 }
 
 func (m *MockURLService) Resolve(ctx context.Context, shortCode string) (string, error) {
@@ -34,12 +35,12 @@ func (m *MockURLService) Resolve(ctx context.Context, shortCode string) (string,
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockURLService) GetStats(ctx context.Context, shortCode string) (*handler.URLRecord, error) {
+func (m *MockURLService) GetStats(ctx context.Context, shortCode string) (*domain.URLRecord, error) {
 	args := m.Called(ctx, shortCode)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*handler.URLRecord), args.Error(1)
+	return args.Get(0).(*domain.URLRecord), args.Error(1)
 }
 
 func TestCreateHandler_ValidRequest_Returns201(t *testing.T) {
@@ -47,7 +48,7 @@ func TestCreateHandler_ValidRequest_Returns201(t *testing.T) {
 	mockService := new(MockURLService)
 	h := handler.New(mockService, "http://localhost:8080")
 
-	expectedRecord := &handler.URLRecord{
+	expectedRecord := &domain.URLRecord{
 		ShortCode: "Ab2CdE3F",
 		LongURL:   "https://example.com/path",
 		CreatedAt: time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC),
@@ -85,7 +86,7 @@ func TestCreateHandler_WithCustomTTL_UsesTTL(t *testing.T) {
 	mockService := new(MockURLService)
 	h := handler.New(mockService, "http://localhost:8080")
 
-	expectedRecord := &handler.URLRecord{
+	expectedRecord := &domain.URLRecord{
 		ShortCode: "Ab2CdE3F",
 		LongURL:   "https://example.com",
 		ExpiresAt: time.Date(2024, 1, 15, 13, 0, 0, 0, time.UTC),

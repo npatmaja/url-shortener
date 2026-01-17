@@ -6,6 +6,8 @@ import (
 	"errors"
 	"net/http"
 	"time"
+
+	"url-shortener/internal/domain"
 )
 
 // Sentinel errors for handler layer
@@ -14,22 +16,12 @@ var (
 	ErrExpired  = errors.New("expired")
 )
 
-// URLRecord represents the domain entity (will be defined in domain package later)
-type URLRecord struct {
-	ShortCode      string
-	LongURL        string
-	CreatedAt      time.Time
-	ExpiresAt      time.Time
-	ClickCount     int64
-	LastAccessedAt time.Time
-}
-
 // URLService defines the service interface.
 // This allows testing handlers without real service implementation.
 type URLService interface {
-	Create(ctx context.Context, longURL string, ttl time.Duration) (*URLRecord, error)
+	Create(ctx context.Context, longURL string, ttl time.Duration) (*domain.URLRecord, error)
 	Resolve(ctx context.Context, shortCode string) (string, error)
-	GetStats(ctx context.Context, shortCode string) (*URLRecord, error)
+	GetStats(ctx context.Context, shortCode string) (*domain.URLRecord, error)
 }
 
 // Handler holds dependencies for HTTP handlers.

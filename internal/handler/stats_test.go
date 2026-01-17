@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"url-shortener/internal/domain"
 	"url-shortener/internal/handler"
 
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ func TestStatsHandler_ValidCode_Returns200(t *testing.T) {
 	h := handler.New(mockService, "http://localhost:8080")
 
 	lastAccessed := time.Date(2024, 1, 15, 15, 30, 0, 0, time.UTC)
-	expectedRecord := &handler.URLRecord{
+	expectedRecord := &domain.URLRecord{
 		ShortCode:      "Ab2CdE3F",
 		LongURL:        "https://example.com",
 		CreatedAt:      time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC),
@@ -57,7 +58,7 @@ func TestStatsHandler_NeverAccessed_LastAccessedIsNull(t *testing.T) {
 	mockService := new(MockURLService)
 	h := handler.New(mockService, "http://localhost:8080")
 
-	expectedRecord := &handler.URLRecord{
+	expectedRecord := &domain.URLRecord{
 		ShortCode:      "newcode1",
 		LongURL:        "https://example.com",
 		CreatedAt:      time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC),
