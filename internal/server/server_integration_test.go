@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"url-shortener/internal/domain"
 	"url-shortener/internal/handler"
 	"url-shortener/internal/server"
 
@@ -18,21 +19,21 @@ import (
 
 // StubURLService is a simple stub implementation for integration testing
 type StubURLService struct {
-	records map[string]*handler.URLRecord
+	records map[string]*domain.URLRecord
 	counter int
 }
 
 func NewStubURLService() *StubURLService {
 	return &StubURLService{
-		records: make(map[string]*handler.URLRecord),
+		records: make(map[string]*domain.URLRecord),
 		counter: 0,
 	}
 }
 
-func (s *StubURLService) Create(ctx context.Context, longURL string, ttl time.Duration) (*handler.URLRecord, error) {
+func (s *StubURLService) Create(ctx context.Context, longURL string, ttl time.Duration) (*domain.URLRecord, error) {
 	s.counter++
 	shortCode := fmt.Sprintf("code%04d", s.counter)
-	record := &handler.URLRecord{
+	record := &domain.URLRecord{
 		ShortCode:  shortCode,
 		LongURL:    longURL,
 		CreatedAt:  time.Now().UTC(),
@@ -46,20 +47,20 @@ func (s *StubURLService) Create(ctx context.Context, longURL string, ttl time.Du
 func (s *StubURLService) Resolve(ctx context.Context, shortCode string) (string, error) {
 	record, ok := s.records[shortCode]
 	if !ok {
-		return "", handler.ErrNotFound
+		return "", domain.ErrNotFound
 	}
 	if time.Now().After(record.ExpiresAt) {
-		return "", handler.ErrExpired
+		return "", domain.ErrExpired
 	}
 	record.ClickCount++
 	record.LastAccessedAt = time.Now().UTC()
 	return record.LongURL, nil
 }
 
-func (s *StubURLService) GetStats(ctx context.Context, shortCode string) (*handler.URLRecord, error) {
+func (s *StubURLService) GetStats(ctx context.Context, shortCode string) (*domain.URLRecord, error) {
 	record, ok := s.records[shortCode]
 	if !ok {
-		return nil, handler.ErrNotFound
+		return nil, domain.ErrNotFound
 	}
 	return record, nil
 }

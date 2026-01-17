@@ -91,7 +91,7 @@ func TestStatsHandler_NotFound_Returns404(t *testing.T) {
 	h := handler.New(mockService, "http://localhost:8080")
 
 	mockService.On("GetStats", mock.Anything, "notfound").
-		Return(nil, handler.ErrNotFound)
+		Return(nil, domain.ErrNotFound)
 
 	req := httptest.NewRequest(http.MethodGet, "/stats/notfound", nil)
 	req.SetPathValue("code", "notfound")

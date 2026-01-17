@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"url-shortener/internal/domain"
 	"url-shortener/internal/handler"
 
 	"github.com/stretchr/testify/assert"
@@ -37,7 +38,7 @@ func TestRedirectHandler_NotFound_Returns404(t *testing.T) {
 	h := handler.New(mockService, "http://localhost:8080")
 
 	mockService.On("Resolve", mock.Anything, "notfound").
-		Return("", handler.ErrNotFound)
+		Return("", domain.ErrNotFound)
 
 	req := httptest.NewRequest(http.MethodGet, "/s/notfound", nil)
 	req.SetPathValue("code", "notfound")
@@ -54,7 +55,7 @@ func TestRedirectHandler_Expired_Returns404(t *testing.T) {
 	h := handler.New(mockService, "http://localhost:8080")
 
 	mockService.On("Resolve", mock.Anything, "expired1").
-		Return("", handler.ErrExpired)
+		Return("", domain.ErrExpired)
 
 	req := httptest.NewRequest(http.MethodGet, "/s/expired1", nil)
 	req.SetPathValue("code", "expired1")
