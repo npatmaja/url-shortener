@@ -2,24 +2,37 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
 	"time"
 
+	"url-shortener/internal/domain"
+	"url-shortener/internal/repository"
 	"url-shortener/internal/server"
+	"url-shortener/internal/service"
+	"url-shortener/internal/shortcode"
 )
 
 func main() {
 	port := getEnvInt("PORT", 8080)
 	shutdownTimeout := getEnvDuration("SHUTDOWN_TIMEOUT", 30*time.Second)
+	baseURL := getEnvString("BASE_URL", fmt.Sprintf("http://localhost:%d", port))
 
 	cfg := server.Config{
 		Port:            port,
 		ShutdownTimeout: shutdownTimeout,
+		BaseURL:         baseURL,
 	}
 
-	srv := server.New(cfg)
+	// Initialize dependencies
+	repo := repository.NewMemoryRepository()
+	generator := shortcode.NewGenerator()
+	clock := domain.RealClock{}
+	urlService := service.NewURLService(repo, generator, clock)
+
+	srv := server.New(cfg, urlService)
 
 	slog.Info("starting server", "port", port)
 
@@ -45,6 +58,13 @@ func getEnvDuration(key string, defaultVal time.Duration) time.Duration {
 		if d, err := time.ParseDuration(val); err == nil {
 			return d
 		}
+	}
+	return defaultVal
+}
+
+func getEnvString(key string, defaultVal string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
 	}
 	return defaultVal
 }

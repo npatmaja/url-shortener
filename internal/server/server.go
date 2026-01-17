@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"url-shortener/internal/handler"
 	"url-shortener/internal/middleware"
 )
 
@@ -17,6 +18,7 @@ import (
 type Config struct {
 	Port            int
 	ShutdownTimeout time.Duration
+	BaseURL         string
 }
 
 // Server represents the HTTP server.
@@ -24,10 +26,12 @@ type Server struct {
 	cfg        Config
 	httpServer *http.Server
 	mux        *http.ServeMux
+	handler    *handler.Handler
 }
 
 // New creates a new Server with the given configuration.
-func New(cfg Config) *Server {
+// Optional urlService can be passed to enable URL shortening endpoints.
+func New(cfg Config, urlService ...handler.URLService) *Server {
 	mux := http.NewServeMux()
 
 	s := &Server{
@@ -42,12 +46,24 @@ func New(cfg Config) *Server {
 		},
 	}
 
+	// If URLService is provided, create handler
+	if len(urlService) > 0 && urlService[0] != nil {
+		s.handler = handler.New(urlService[0], cfg.BaseURL)
+	}
+
 	s.registerRoutes()
 	return s
 }
 
 func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /health", s.handleHealth)
+
+	// Register URL shortening routes if handler is available
+	if s.handler != nil {
+		s.mux.HandleFunc("POST /shorten", s.handler.Create)
+		s.mux.HandleFunc("GET /s/{code}", s.handler.Redirect)
+		s.mux.HandleFunc("GET /stats/{code}", s.handler.Stats)
+	}
 }
 
 type healthResponse struct {
