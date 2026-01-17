@@ -109,17 +109,19 @@ else
     echo -e "${RED}✗ URL shortening with TTL failed${NC}"
 fi
 
-# Test 4: Get Stats
+# Test 4: Get Stats (initial - click_count should be 0)
 if [ -n "$SHORT_CODE" ]; then
-    echo -e "\n${YELLOW}4. Testing GET /stats/{code}${NC}"
+    echo -e "\n${YELLOW}4. Testing GET /stats/{code} (initial stats)${NC}"
     echo "Request: GET $BASE_URL/stats/$SHORT_CODE"
     STATS_RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" "$BASE_URL/stats/$SHORT_CODE")
     HTTP_CODE=$(echo "$STATS_RESPONSE" | grep "HTTP_CODE" | cut -d: -f2)
     BODY=$(echo "$STATS_RESPONSE" | grep -v "HTTP_CODE")
     echo "Response ($HTTP_CODE):"
     echo "$BODY" | jq . 2>/dev/null || echo "$BODY"
-    if [ "$HTTP_CODE" = "200" ]; then
-        echo -e "${GREEN}✓ Stats retrieval passed${NC}"
+    INITIAL_CLICK_COUNT=$(echo "$BODY" | jq -r '.click_count')
+    echo "Initial click count: $INITIAL_CLICK_COUNT (should be 0)"
+    if [ "$HTTP_CODE" = "200" ] && [ "$INITIAL_CLICK_COUNT" = "0" ]; then
+        echo -e "${GREEN}✓ Stats retrieval passed (click_count is 0)${NC}"
     else
         echo -e "${RED}✗ Stats retrieval failed${NC}"
     fi
@@ -127,15 +129,16 @@ else
     echo -e "\n${YELLOW}4. Skipping stats test - no short code available${NC}"
 fi
 
-# Test 5: Redirect
+# Test 5: Redirect (single request to avoid inflating click_count)
 if [ -n "$SHORT_CODE" ]; then
     echo -e "\n${YELLOW}5. Testing GET /s/{code} (redirect)${NC}"
     echo "Request: GET $BASE_URL/s/$SHORT_CODE"
-    REDIRECT_RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" -o /dev/null "$BASE_URL/s/$SHORT_CODE")
+    # Use -I for HEAD-like behavior but capture everything in one request
+    REDIRECT_RESPONSE=$(curl -s -I -w "\nHTTP_CODE:%{http_code}" "$BASE_URL/s/$SHORT_CODE")
     HTTP_CODE=$(echo "$REDIRECT_RESPONSE" | grep "HTTP_CODE" | cut -d: -f2)
+    LOCATION=$(echo "$REDIRECT_RESPONSE" | grep -i "^Location:" | tr -d '\r')
     echo "Response: HTTP $HTTP_CODE (302 = redirect)"
     if [ "$HTTP_CODE" = "302" ]; then
-        LOCATION=$(curl -s -I "$BASE_URL/s/$SHORT_CODE" | grep -i "Location" | tr -d '\r')
         echo "$LOCATION"
         echo -e "${GREEN}✓ Redirect passed${NC}"
     else
@@ -145,7 +148,7 @@ else
     echo -e "\n${YELLOW}5. Skipping redirect test - no short code available${NC}"
 fi
 
-# Test 6: Get Stats again (should show click_count increased)
+# Test 6: Get Stats again (should show click_count = 1 after single redirect)
 if [ -n "$SHORT_CODE" ]; then
     echo -e "\n${YELLOW}6. Testing GET /stats/{code} (after redirect)${NC}"
     echo "Request: GET $BASE_URL/stats/$SHORT_CODE"
@@ -155,11 +158,11 @@ if [ -n "$SHORT_CODE" ]; then
     echo "Response ($HTTP_CODE):"
     echo "$BODY" | jq . 2>/dev/null || echo "$BODY"
     CLICK_COUNT=$(echo "$BODY" | jq -r '.click_count')
-    echo "Click count: $CLICK_COUNT (should be >= 1 after redirect)"
-    if [ "$HTTP_CODE" = "200" ] && [ "$CLICK_COUNT" -ge 1 ]; then
-        echo -e "${GREEN}✓ Click tracking passed${NC}"
+    echo "Click count: $CLICK_COUNT (should be 1 after single redirect)"
+    if [ "$HTTP_CODE" = "200" ] && [ "$CLICK_COUNT" = "1" ]; then
+        echo -e "${GREEN}✓ Click tracking passed (click_count is 1)${NC}"
     else
-        echo -e "${RED}✗ Click tracking failed${NC}"
+        echo -e "${RED}✗ Click tracking failed (expected click_count = 1, got $CLICK_COUNT)${NC}"
     fi
 fi
 
