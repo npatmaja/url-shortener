@@ -1,0 +1,11 @@
+linters:
+  enable:
+    - gocyclo
+    - revive
+
+linters-settings:
+  gocyclo:
+    min-complexity: 10
+  revive:
+    rules:
+      - name: exported
