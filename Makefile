@@ -1,4 +1,4 @@
-.PHONY: lint test build clean
+.PHONY: lint test test-race build clean
 
 lint:
 	golangci-lint run ./...
@@ -6,8 +6,13 @@ lint:
 test:
 	go test -v ./...
 
+test-race:
+	go test -race -v ./...
+
 build:
-	go build -o bin/server ./cmd/server
+	@mkdir -p bin
+	CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/server ./cmd/server
 
 clean:
 	rm -rf bin/
+	go clean
