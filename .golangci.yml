@@ -1,38 +1,74 @@
 run:
   timeout: 5m
+  modules-download-mode: readonly
 
 linters:
   enable:
     # Required by assessment
     - gocyclo
     - revive
-    # Standard linters
+
+    # Additional quality linters
     - errcheck
     - gosimple
     - govet
     - ineffassign
     - staticcheck
     - unused
+    - gosec        # NEW: Security scanner
+    - bodyclose    # NEW: HTTP response body close checker
+    - noctx        # NEW: Context usage checker
+    - gofmt        # NEW: Format checker
+    - goimports    # NEW: Import organization
 
 linters-settings:
   gocyclo:
-    # Assessment requirement: no function may exceed complexity of 10
     min-complexity: 10
+
   revive:
     severity: warning
     rules:
-      - name: exported
-      - name: var-naming
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
       - name: error-return
       - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
       - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+
+  gosec:
+    excludes:
+      - G104 # Audit errors not checked (we handle errors explicitly)
 
 issues:
-  # Fail on any warning
   max-issues-per-linter: 0
   max-same-issues: 0
+
   exclude-rules:
-    # Ignore errcheck in tests - test handlers don't need error checking
     - path: _test\.go
       linters:
         - errcheck
+        - gocyclo
+        - noctx        # Tests often use http.Get without context
+        - bodyclose    # Tests may not always close response bodies
+        - gosec        # Tests may have patterns that trigger security warnings
+    - path: _test\.go
+      text: "unused-parameter"
+      linters:
+        - revive

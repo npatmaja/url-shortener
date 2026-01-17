@@ -1,0 +1,26 @@
+FROM golang:1.24-alpine AS builder
+
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Build for Lambda (binary must be named 'bootstrap' for provided.al2023 runtime)
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build \
+    -tags lambda.norpc \
+    -ldflags="-w -s" \
+    -o /app/bootstrap \
+    ./cmd/lambda
+
+# =============================================================================
+# Lambda runtime
+# =============================================================================
+FROM public.ecr.aws/lambda/provided:al2023-arm64
+
+COPY --from=builder /app/bootstrap ${LAMBDA_RUNTIME_DIR}/bootstrap
+
+CMD ["bootstrap"]
